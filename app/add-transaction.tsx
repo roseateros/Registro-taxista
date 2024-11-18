@@ -1,29 +1,31 @@
 import { useState } from 'react';
 import { 
   View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   Modal,
   Keyboard,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  Animated,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { useTransactions, TransactionTypes } from '../context/TransactionsContext';
 import Colors from '../constants/Colors';
 import { router } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type InputField = {
   description: string;
   amount: string;
 };
 
-const INCOME_SOURCES = ['Taximeter Card', 'Taximeter Cash', 'FreeNow App Cash', 'FreeNow App Card', 'Tips and other'];
+const INCOME_SOURCES = ['Taximeter Card', 'Taximeter Cash', 'FreeNow App Cash', 'FreeNow App Card','FreeNow Via App', 'Tips and other'];
 
 const getInitialFields = (type: TransactionTypes): InputField[] => {
   if (type === TransactionTypes.INCOME) {
@@ -41,12 +43,29 @@ export default function AddTransaction() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const { addTransaction } = useTransactions();
+  const [animation] = useState(new Animated.Value(0));
+
+  const animateTypeChange = (newType: TransactionTypes) => {
+    Animated.sequence([
+      Animated.timing(animation, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animation, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      handleTypeChange(newType);
+    });
+  };
 
   const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
-    
     if (event.type === 'set' && date) {
       setSelectedDate(date);
     }
@@ -99,6 +118,59 @@ export default function AddTransaction() {
     router.back();
   };
 
+  const renderField = (field: InputField, index: number) => {
+    if (type === TransactionTypes.INCOME) {
+      return (
+        <View key={index} style={styles.cardContainer}>
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons 
+              name="cash-register" 
+              size={24} 
+              color={Colors.income} 
+            />
+            <Text style={styles.cardTitle}>{field.description}</Text>
+          </View>
+          <View style={styles.cardContent}>
+            <View style={styles.amountContainer}>
+              <Text style={styles.currencySymbol}>€</Text>
+              <TextInput
+                style={styles.amountInput}
+                placeholder="0.00"
+                value={field.amount}
+                onChangeText={(value) => updateField(index, 'amount', value)}
+                keyboardType="decimal-pad"
+                placeholderTextColor={Colors.placeholder}
+              />
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View key={index} style={styles.cardContainer}>
+        <TextInput
+          style={styles.descriptionInput}
+          placeholder="Description"
+          value={field.description}
+          onChangeText={(value) => updateField(index, 'description', value)}
+          placeholderTextColor={Colors.placeholder}
+        />
+        <View style={styles.amountContainer}>
+          <Text style={styles.currencySymbol}>€</Text>
+          <TextInput
+            style={styles.amountInput}
+            placeholder="0.00"
+            value={field.amount}
+            onChangeText={(value) => updateField(index, 'amount', value)}
+            keyboardType="decimal-pad"
+            placeholderTextColor={Colors.placeholder}
+          />
+        </View>
+      </View>
+    );
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.mainContainer}>
@@ -107,26 +179,26 @@ export default function AddTransaction() {
           style={styles.container}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
         >
-          <View style={[
-            styles.contentContainer,
-            Platform.OS === 'ios' && { paddingBottom: 20 }
-          ]}>
-            <ScrollView 
-              contentContainerStyle={[
-                styles.scrollContent,
-                Platform.OS === 'ios' && { paddingBottom: 40 }
-              ]}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
+          <Animated.View 
+            style={[
+              styles.contentContainer,
+              { opacity: animation.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }
+            ]}
+          >
+            <View style={styles.header}>
               <View style={styles.typeContainer}>
                 <TouchableOpacity 
                   style={[
                     styles.typeButton, 
                     type === TransactionTypes.EXPENSE && styles.selectedExpenseType
                   ]}
-                  onPress={() => handleTypeChange(TransactionTypes.EXPENSE)}
+                  onPress={() => animateTypeChange(TransactionTypes.EXPENSE)}
                 >
+                  <MaterialCommunityIcons 
+                    name="arrow-up-circle" 
+                    size={24} 
+                    color={type === TransactionTypes.EXPENSE ? Colors.white : Colors.expense} 
+                  />
                   <Text style={[
                     styles.typeText, 
                     type === TransactionTypes.EXPENSE && styles.selectedTypeText
@@ -139,8 +211,13 @@ export default function AddTransaction() {
                     styles.typeButton, 
                     type === TransactionTypes.INCOME && styles.selectedIncomeType
                   ]}
-                  onPress={() => handleTypeChange(TransactionTypes.INCOME)}
+                  onPress={() => animateTypeChange(TransactionTypes.INCOME)}
                 >
+                  <MaterialCommunityIcons 
+                    name="arrow-down-circle" 
+                    size={24} 
+                    color={type === TransactionTypes.INCOME ? Colors.white : Colors.income} 
+                  />
                   <Text style={[
                     styles.typeText, 
                     type === TransactionTypes.INCOME && styles.selectedTypeText
@@ -150,93 +227,30 @@ export default function AddTransaction() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.dateContainer}>
-                <Text style={styles.fieldHeader}>Date</Text>
-                <TouchableOpacity 
-                  style={styles.dateButton}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text style={styles.dateButtonText}>
-                    {format(selectedDate, 'MMM dd, yyyy')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {Platform.OS === 'ios' && (
-                <Modal
-                  visible={showDatePicker}
-                  transparent={true}
-                  animationType="slide"
-                >
-                  <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                      <DateTimePicker
-                        value={selectedDate}
-                        mode="date"
-                        display="inline"
-                        onChange={handleDateChange}
-                        themeVariant="light"
-                        accentColor={Colors.primary}
-                      />
-                      <TouchableOpacity
-                        style={styles.modalButton}
-                        onPress={() => setShowDatePicker(false)}
-                      >
-                        <Text style={styles.modalButtonText}>Done</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </Modal>
-              )}
-
-              {Platform.OS === 'android' && showDatePicker && (
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="date"
-                  onChange={handleDateChange}
+              <TouchableOpacity 
+                style={styles.dateButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <MaterialCommunityIcons 
+                  name="calendar" 
+                  size={24} 
+                  color={Colors.primary} 
                 />
-              )}
+                <Text style={styles.dateButtonText}>
+                  {format(selectedDate, 'MMM dd, yyyy')}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-              {fields.map((field, index) => (
-                <View key={index} style={styles.fieldContainer}>
-                  {type === TransactionTypes.INCOME ? (
-                    <>
-                      <Text style={styles.fieldHeader}>{field.description}</Text>
-                      <View style={styles.inputRow}>
-                        <TextInput
-                          style={[styles.input, styles.amountInput]}
-                          placeholder="Amount"
-                          value={field.amount}
-                          onChangeText={(value) => updateField(index, 'amount', value)}
-                          keyboardType="decimal-pad"
-                        />
-                      </View>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.fieldHeader}>Expense Details</Text>
-                      <View style={styles.inputRow}>
-                        <TextInput
-                          style={[styles.input, styles.descriptionInput]}
-                          placeholder="Description"
-                          value={field.description}
-                          onChangeText={(value) => updateField(index, 'description', value)}
-                        />
-                        <TextInput
-                          style={[styles.input, styles.amountInput]}
-                          placeholder="Amount"
-                          value={field.amount}
-                          onChangeText={(value) => updateField(index, 'amount', value)}
-                          keyboardType="decimal-pad"
-                        />
-                      </View>
-                    </>
-                  )}
-                </View>
-              ))}
+            <ScrollView 
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {fields.map((field, index) => renderField(field, index))}
 
-              <View style={styles.totalContainer}>
-                <Text style={styles.totalText}>Total Amount:</Text>
+              <View style={styles.totalCard}>
+                <Text style={styles.totalLabel}>Total Amount</Text>
                 <Text style={[
                   styles.totalAmount,
                   { color: type === TransactionTypes.INCOME ? Colors.income : Colors.expense }
@@ -245,22 +259,51 @@ export default function AddTransaction() {
                 </Text>
               </View>
             </ScrollView>
-          </View>
 
-          <View style={[
-            styles.buttonContainer,
-            Platform.OS === 'ios' && { marginBottom: 20 }
-          ]}>
             <TouchableOpacity 
               style={[
-                styles.addButton, 
+                styles.submitButton,
                 { backgroundColor: type === TransactionTypes.INCOME ? Colors.income : Colors.expense }
               ]}
               onPress={handleSubmit}
             >
-              <Text style={styles.addButtonText}>Add Transaction</Text>
+              <MaterialCommunityIcons 
+                name="check-circle" 
+                size={24} 
+                color={Colors.white} 
+              />
+              <Text style={styles.submitButtonText}>
+                Add {type === TransactionTypes.INCOME ? 'Income' : 'Expense'}
+              </Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
+
+          {(Platform.OS === 'ios' || showDatePicker) && (
+            <Modal
+              visible={showDatePicker}
+              transparent={true}
+              animationType="slide"
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="date"
+                    display="inline"
+                    onChange={handleDateChange}
+                    themeVariant="light"
+                    accentColor={Colors.primary}
+                  />
+                  <TouchableOpacity
+                    style={styles.modalButton}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.modalButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+          )}
         </KeyboardAvoidingView>
       </View>
     </TouchableWithoutFeedback>
@@ -277,22 +320,36 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    padding: 16,
   },
-  scrollContent: {
-    flexGrow: 1,
+  header: {
+    marginBottom: 16,
   },
   typeContainer: {
     flexDirection: 'row',
-    margin: 20,
-    marginBottom: 10,
+    gap: 12,
+    marginBottom: 16,
   },
   typeButton: {
     flex: 1,
-    padding: 15,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
     backgroundColor: Colors.white,
-    marginHorizontal: 5,
-    borderRadius: 10,
+    borderRadius: 12,
+    gap: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   selectedExpenseType: {
     backgroundColor: Colors.expense,
@@ -302,97 +359,134 @@ const styles = StyleSheet.create({
   },
   typeText: {
     fontSize: 16,
+    fontWeight: '600',
     color: Colors.text,
   },
   selectedTypeText: {
     color: Colors.white,
   },
-  fieldContainer: {
-    marginHorizontal: 20,
-    marginVertical: 10,
-  },
-  fieldHeader: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 5,
-    color: Colors.text,
-  },
-  inputRow: {
+  dateButton: {
     flexDirection: 'row',
-    gap: 10,
-  },
-  input: {
-    backgroundColor: Colors.white,
-    padding: 15,
-    borderRadius: 10,
-    fontSize: 16,
-  },
-  descriptionInput: {
-    flex: 2,
-  },
-  amountInput: {
-    flex: 1,
-  },
-  totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: Colors.white,
-    margin: 20,
-    padding: 15,
-    borderRadius: 10,
-  },
-  totalText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.text,
-  },
-  totalAmount: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  buttonContainer: {
-    padding: 20,
-    backgroundColor: Colors.background,
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: -2,
-        },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
       },
       android: {
-        elevation: 4,
+        elevation: 3,
       },
     }),
-  },
-  addButton: {
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    width: '100%',
-  },
-  addButtonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  dateContainer: {
-    marginHorizontal: 20,
-    marginVertical: 10,
-  },
-  dateButton: {
-    backgroundColor: Colors.white,
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
   },
   dateButtonText: {
     fontSize: 16,
     color: Colors.text,
+    fontWeight: '500',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    gap: 12,
+  },
+  cardContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  cardContent: {
+    marginTop: 8,
+  },
+  descriptionInput: {
+    fontSize: 16,
+    color: Colors.text,
+    marginBottom: 12,
+    padding: 0,
+  },
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  currencySymbol: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: 24,
+    fontWeight: '600',
+    color: Colors.text,
+    padding: 0,
+  },
+  totalCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  totalLabel: {
+    fontSize: 14,
+    color: Colors.textLight,
+    marginBottom: 4,
+  },
+  totalAmount: {
+    fontSize: 32,
+    fontWeight: '700',
+  },
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    gap: 8,
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.white,
   },
   modalContainer: {
     flex: 1,
@@ -404,17 +498,29 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   modalButton: {
-    marginTop: 10,
-    padding: 15,
-    alignItems: 'center',
+    marginTop: 16,
+    padding: 16,
     backgroundColor: Colors.primary,
-    borderRadius: 8,
+    borderRadius: 12,
+    alignItems: 'center',
   },
   modalButtonText: {
     color: Colors.white,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
+
