@@ -1,50 +1,124 @@
-# Welcome to your Expo app 👋
+# 💶 Transaction Tracker Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Overview
 
-## Get started
+Transaction Tracker is a mobile application built with React Native that helps users efficiently track their daily income and expenses. The app provides a user-friendly interface for quickly logging financial transactions with customizable input options.
 
-1. Install dependencies
+## 🌟 Features
 
-   ```bash
-   npm install
-   ```
+### Dynamic Transaction Entry
+- Support for both Income and Expense transactions
+- Multiple input fields for detailed transaction logging
+- Flexible input based on transaction type
 
-2. Start the app
+### Income Tracking
+- Predefined income sources:
+  - Taximeter Card
+  - Taximeter Cash
+  - FreeNow App Cash
+  - FreeNow App Card
+  - FreeNow Via App
+  - Tips and other
 
-   ```bash
-    npx expo start
-   ```
+### Expense Tracking
+- Free-form description for each expense
+- Individual amount tracking
 
-In the output, you'll find options to open the app in a
+### Additional Capabilities
+- Date selection for transactions
+- Real-time total amount calculation
+- Responsive design for iOS and Android
+- Keyboard-friendly interface
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 🛠 Tech Stack
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- React Native
+- Expo
+- TypeScript
+- @react-native-community/datetimepicker
+- date-fns
+- Expo Router
+- Custom Transactions Context
 
-## Get a fresh project
+## 📦 Prerequisites
 
-When you're ready, run:
+- Node.js (v16 or later)
+- npm or Yarn
+- Expo CLI
+- React Native development environment
+- iOS Simulator or Android Emulator
+- Smartphone with Expo Go (optional)
 
+## 🚀 Installation
+
+1. Clone the repository:
 ```bash
-npm run reset-project
+git clone 
+cd transaction-tracker-app
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+```
 
-## Learn more
+3. Start the development server:
+```bash
+npm start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## 📱 Running the App
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- For iOS Simulator: Press `i`
+- For Android Emulator: Press `a`
+- For physical device: Scan QR code with Expo Go app
 
-## Join the community
+## 🔧 Key Components
 
-Join our community of developers creating universal apps.
+### Transaction Types
+- **Income**: Pre-configured sources with amount entry
+- **Expense**: Custom description with amount entry
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Date Handling
+- Inline date picker
+- Support for both iOS and Android
+- Ability to select past and current dates
+
+### State Management
+- Uses React's `useState` and `useCallback`
+- Custom transactions context for data persistence
+
+## 💡 Usage Tips
+
+1. Select transaction type (Income/Expense)
+2. Choose transaction date
+3. Fill in relevant fields
+4. Submit transaction
+
+## 🎨 Customization
+
+The app uses a custom `Colors` constant for theming. You can easily modify colors in the `Colors.ts` file.
+
+## 🔒 Error Handling
+
+- Validation for empty fields
+- Type-specific input requirements
+- User-friendly error messages
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+## 📧 Contact
+
+Roshan Gautam
