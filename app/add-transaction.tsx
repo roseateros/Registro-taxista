@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { 
   View, 
   Text,
@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
+  FlatList,
   Modal,
   Keyboard,
   TouchableWithoutFeedback,
-  Animated,
+  Dimensions,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -25,7 +25,7 @@ type InputField = {
   amount: string;
 };
 
-const INCOME_SOURCES = ['Taximeter Card', 'Taximeter Cash', 'FreeNow App Cash', 'FreeNow App Card','FreeNow Via App', 'Tips and other'];
+const INCOME_SOURCES = ['Taximeter Card', 'Taximeter Cash', 'FreeNow App Cash', 'FreeNow App Card', 'FreeNow Via App', 'Tips and other'];
 
 const getInitialFields = (type: TransactionTypes): InputField[] => {
   if (type === TransactionTypes.INCOME) {
@@ -37,59 +37,45 @@ const getInitialFields = (type: TransactionTypes): InputField[] => {
   return [{ description: '', amount: '' }];
 };
 
-export default function AddTransaction() {
-  const [type, setType] = useState<TransactionTypes>(TransactionTypes.EXPENSE);
-  const [fields, setFields] = useState<InputField[]>(getInitialFields(type));
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+export default function OptimizedAddTransaction() {
+  const [type, setType] = useState<TransactionTypes>(TransactionTypes.INCOME);
+  const [fields, setFields] = useState<InputField[]>(getInitialFields(TransactionTypes.INCOME));
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const { addTransaction } = useTransactions();
-  const [animation] = useState(new Animated.Value(0));
 
-  const animateTypeChange = (newType: TransactionTypes) => {
-    Animated.sequence([
-      Animated.timing(animation, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(animation, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      handleTypeChange(newType);
-    });
-  };
-
-  const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
+  const handleDateChange = useCallback((event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
     if (event.type === 'set' && date) {
       setSelectedDate(date);
     }
-  };
+  }, []);
 
-  const handleTypeChange = (newType: TransactionTypes) => {
+  const handleTypeChange = useCallback((newType: TransactionTypes) => {
     setType(newType);
     setFields(getInitialFields(newType));
-  };
+  }, []);
 
-  const updateField = (index: number, field: keyof InputField, value: string) => {
-    const newFields = [...fields];
-    newFields[index] = { ...newFields[index], [field]: value };
-    setFields(newFields);
-  };
+  const updateField = useCallback((index: number, field: keyof InputField, value: string) => {
+    setFields(prevFields => {
+      const newFields = [...prevFields];
+      newFields[index] = { ...newFields[index], [field]: value };
+      return newFields;
+    });
+  }, []);
 
-  const getTotalAmount = () => {
+  const getTotalAmount = useMemo(() => {
     return fields.reduce((sum, field) => {
       const amount = parseFloat(field.amount) || 0;
       return sum + amount;
     }, 0);
-  };
+  }, [fields]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     const filledFields = fields.filter(field => {
       if (type === TransactionTypes.EXPENSE) {
         return field.description.trim() !== '' && field.amount.trim() !== '';
@@ -116,60 +102,54 @@ export default function AddTransaction() {
     await addTransaction(transactions);
     setFields(getInitialFields(type));
     router.back();
-  };
+  }, [fields, type, selectedDate, addTransaction]);
 
-  const renderField = (field: InputField, index: number) => {
+  const renderField = useCallback(({ item, index }: { item: InputField; index: number }) => {
     if (type === TransactionTypes.INCOME) {
       return (
-        <View key={index} style={styles.cardContainer}>
-          <View style={styles.cardHeader}>
-            <MaterialCommunityIcons 
-              name="cash-register" 
-              size={24} 
-              color={Colors.income} 
+        <View style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>{item.description}</Text>
+          <View style={styles.amountContainer}>
+            <Text style={styles.currencySymbol}>€</Text>
+            <TextInput
+              style={styles.amountInput}
+              placeholder="0.00"
+              value={item.amount}
+              onChangeText={(value) => updateField(index, 'amount', value)}
+              keyboardType="decimal-pad"
+              placeholderTextColor={Colors.placeholder}
+              color={Colors.text}
             />
-            <Text style={styles.cardTitle}>{field.description}</Text>
-          </View>
-          <View style={styles.cardContent}>
-            <View style={styles.amountContainer}>
-              <Text style={styles.currencySymbol}>€</Text>
-              <TextInput
-                style={styles.amountInput}
-                placeholder="0.00"
-                value={field.amount}
-                onChangeText={(value) => updateField(index, 'amount', value)}
-                keyboardType="decimal-pad"
-                placeholderTextColor={Colors.placeholder}
-              />
-            </View>
           </View>
         </View>
       );
     }
 
     return (
-      <View key={index} style={styles.cardContainer}>
+      <View style={styles.fullWidthFieldContainer}>
         <TextInput
           style={styles.descriptionInput}
           placeholder="Description"
-          value={field.description}
+          value={item.description}
           onChangeText={(value) => updateField(index, 'description', value)}
           placeholderTextColor={Colors.placeholder}
+          color={Colors.text}
         />
         <View style={styles.amountContainer}>
           <Text style={styles.currencySymbol}>€</Text>
           <TextInput
             style={styles.amountInput}
             placeholder="0.00"
-            value={field.amount}
+            value={item.amount}
             onChangeText={(value) => updateField(index, 'amount', value)}
             keyboardType="decimal-pad"
             placeholderTextColor={Colors.placeholder}
+            color={Colors.text}
           />
         </View>
       </View>
     );
-  };
+  }, [type, updateField]);
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -179,12 +159,7 @@ export default function AddTransaction() {
           style={styles.container}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
         >
-          <Animated.View 
-            style={[
-              styles.contentContainer,
-              { opacity: animation.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }
-            ]}
-          >
+          <View style={styles.contentContainer}>
             <View style={styles.header}>
               <View style={styles.typeContainer}>
                 <TouchableOpacity 
@@ -192,7 +167,7 @@ export default function AddTransaction() {
                     styles.typeButton, 
                     type === TransactionTypes.EXPENSE && styles.selectedExpenseType
                   ]}
-                  onPress={() => animateTypeChange(TransactionTypes.EXPENSE)}
+                  onPress={() => handleTypeChange(TransactionTypes.EXPENSE)}
                 >
                   <MaterialCommunityIcons 
                     name="arrow-up-circle" 
@@ -211,7 +186,7 @@ export default function AddTransaction() {
                     styles.typeButton, 
                     type === TransactionTypes.INCOME && styles.selectedIncomeType
                   ]}
-                  onPress={() => animateTypeChange(TransactionTypes.INCOME)}
+                  onPress={() => handleTypeChange(TransactionTypes.INCOME)}
                 >
                   <MaterialCommunityIcons 
                     name="arrow-down-circle" 
@@ -242,23 +217,26 @@ export default function AddTransaction() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView 
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
+            <FlatList
+              key={type}
+              data={fields}
+              renderItem={renderField}
+              keyExtractor={(item, index) => index.toString()}
+              contentContainerStyle={styles.listContent}
+              numColumns={type === TransactionTypes.INCOME ? 2 : 1}
+              columnWrapperStyle={type === TransactionTypes.INCOME ? styles.row : undefined}
               showsVerticalScrollIndicator={false}
-            >
-              {fields.map((field, index) => renderField(field, index))}
+            />
 
-              <View style={styles.totalCard}>
-                <Text style={styles.totalLabel}>Total Amount</Text>
-                <Text style={[
-                  styles.totalAmount,
-                  { color: type === TransactionTypes.INCOME ? Colors.income : Colors.expense }
-                ]}>
-                  €{getTotalAmount().toFixed(2)}
-                </Text>
-              </View>
-            </ScrollView>
+            <View style={styles.totalCard}>
+              <Text style={styles.totalLabel}>Total Amount</Text>
+              <Text style={[
+                styles.totalAmount,
+                { color: type === TransactionTypes.INCOME ? Colors.income : Colors.expense }
+              ]}>
+                €{getTotalAmount.toFixed(2)}
+              </Text>
+            </View>
 
             <TouchableOpacity 
               style={[
@@ -276,7 +254,7 @@ export default function AddTransaction() {
                 Add {type === TransactionTypes.INCOME ? 'Income' : 'Expense'}
               </Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
 
           {(Platform.OS === 'ios' || showDatePicker) && (
             <Modal
@@ -327,18 +305,18 @@ const styles = StyleSheet.create({
   },
   typeContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 8,
   },
   typeButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 12,
     backgroundColor: Colors.white,
-    borderRadius: 12,
-    gap: 8,
+    borderRadius: 8,
+    gap: 4,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -368,10 +346,12 @@ const styles = StyleSheet.create({
   dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.white,
-    padding: 16,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 8,
     gap: 8,
+    marginTop: 8,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -389,16 +369,18 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: '500',
   },
-  scrollView: {
-    flex: 1,
+  listContent: {
+    flexGrow: 1,
   },
-  scrollContent: {
-    gap: 12,
+  row: {
+    justifyContent: 'space-between',
   },
-  cardContainer: {
+  fieldContainer: {
+    width: (SCREEN_WIDTH - 40) / 2,
     backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -411,24 +393,16 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  cardTitle: {
-    fontSize: 16,
+  fieldLabel: {
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.text,
-  },
-  cardContent: {
-    marginTop: 8,
+    marginBottom: 6,
   },
   descriptionInput: {
     fontSize: 16,
     color: Colors.text,
-    marginBottom: 12,
+    marginBottom: 6,
     padding: 0,
   },
   amountContainer: {
@@ -437,22 +411,22 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   currencySymbol: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '600',
     color: Colors.text,
   },
   amountInput: {
     flex: 1,
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '600',
     color: Colors.text,
     padding: 0,
   },
   totalCard: {
     backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 4,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -466,12 +440,12 @@ const styles = StyleSheet.create({
     }),
   },
   totalLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: Colors.textLight,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   totalAmount: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '700',
   },
   submitButton: {
@@ -479,12 +453,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 8,
     marginTop: 16,
     gap: 8,
   },
   submitButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: Colors.white,
   },
@@ -512,9 +486,9 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     marginTop: 16,
-    padding: 16,
+    padding: 12,
     backgroundColor: Colors.primary,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
   },
   modalButtonText: {
@@ -522,5 +496,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  fullWidthFieldContainer: {
+    width: SCREEN_WIDTH - 32,
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
 });
-

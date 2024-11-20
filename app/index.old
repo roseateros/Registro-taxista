@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
@@ -9,16 +9,16 @@ import {
   Platform,
   SectionList,
   StatusBar,
-  SafeAreaView,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { format, isWithinInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
-import { useTransactions, TransactionTypes } from '../context/TransactionsContext';
-import Colors from '../constants/Colors';
-import { router } from 'expo-router';
-import * as Sharing from 'expo-sharing';
-import * as Print from 'expo-print';
-import { MaterialIcons } from '@expo/vector-icons';
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { format, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
+import { useTransactions, TransactionTypes } from "../context/TransactionsContext";
+import Colors from "../constants/Colors";
+import { router } from "expo-router";
+import * as Sharing from "expo-sharing";
+import * as Print from "expo-print";
+import { MaterialIcons } from "@expo/vector-icons";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 export default function Home() {
   const { transactions, deleteTransaction, importTransactions, exportTransactions } = useTransactions();
@@ -30,68 +30,68 @@ export default function Home() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
-  const getCurrentMonthBalance = useCallback(() => {
+  const getCurrentMonthBalance = () => {
     const now = new Date();
     const start = startOfMonth(now);
     const end = endOfMonth(now);
 
     return transactions.reduce((total, transaction) => {
-      const transactionDate = parseISO(transaction.date);
+      const transactionDate = new Date(transaction.date);
       if (isWithinInterval(transactionDate, { start, end })) {
         return total + (transaction.type === TransactionTypes.INCOME ? transaction.amount : -transaction.amount);
       }
       return total;
     }, 0);
-  }, [transactions]);
+  };
 
-  const handleConfirmDate = useCallback((date, isStart = true) => {
+  const handleConfirmDate = (date, isStart = true) => {
     if (isStart) {
       setStartDate(date);
-      setShowStartPicker(false);
       if (endDate && date > endDate) {
         setEndDate(date);
       }
     } else {
       if (startDate && date < startDate) {
-        Alert.alert('Fecha inválida', 'La fecha final no puede ser anterior a la fecha inicial');
+        Alert.alert("Invalid Date", "End date cannot be before start date");
         return;
       }
       setEndDate(date);
-      setShowEndPicker(false);
     }
-  }, [startDate, endDate]);
+    // Close the picker
+    isStart ? setShowStartPicker(false) : setShowEndPicker(false);
+  };
 
-  const handleImport = useCallback(async () => {
+  const handleImport = async () => {
     try {
       await importTransactions();
-      Alert.alert('Éxito', '¡Transacciones importadas correctamente!');
+      Alert.alert("Success", "Transactions imported successfully!");
     } catch (error) {
-      Alert.alert('Error', 'No se pudieron importar las transacciones.');
+      Alert.alert("Error", "Failed to import transactions.");
     }
-  }, [importTransactions]);
+  };
 
-  const handleExport = useCallback(async () => {
+  const handleExport = async () => {
     try {
       await exportTransactions();
-      Alert.alert('Éxito', '¡Transacciones exportadas correctamente!');
+      Alert.alert("Success", "Transactions exported successfully!");
     } catch (error) {
-      Alert.alert('Error', 'No se pudieron exportar las transacciones.');
+      Alert.alert("Error", "Failed to export transactions.");
     }
-  }, [exportTransactions]);
+  };
 
-  const createHTMLContent = useCallback(() => {
+  const createHTMLContent = () => {
     let netBalance = 0;
 
     const filteredTransactions = transactions.filter((transaction) => {
       if (!startDate && !endDate) return true;
-      const transactionDate = parseISO(transaction.date);
+      const transactionDate = new Date(transaction.date);
       const start = startDate || new Date(0);
       const end = endDate || new Date(2099, 11, 31);
       return isWithinInterval(transactionDate, { start, end });
     });
 
     const sortedTransactions = [...filteredTransactions].sort(
-      (a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
     sortedTransactions.forEach((t) => {
@@ -101,12 +101,11 @@ export default function Home() {
     return `
       <html>
         <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
           <style>
             body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+              font-family: Arial, sans-serif;
               padding: 20px;
-              font-size: 14px;
+              font-size: 12px;
             }
             table { 
               width: 100%; 
@@ -116,10 +115,10 @@ export default function Home() {
             th, td { 
               border: 1px solid #ddd; 
               padding: 8px; 
-              text-align: left;
             }
             th { 
               background-color: #f2f2f2; 
+              text-align: left;
             }
             .summary { 
               margin: 20px 0;
@@ -134,40 +133,40 @@ export default function Home() {
           </style>
         </head>
         <body>
-          <h1>Informe de Transacciones</h1>
-          <p>Período: ${startDate ? format(startDate, 'dd/MM/yyyy') : 'Inicio'} a ${endDate ? format(endDate, 'dd/MM/yyyy') : 'Fin'}</p>
+          <h1>Transaction Report</h1>
+          <p>Period: ${startDate ? format(startDate, "MMM dd, yyyy") : "Start"} to ${endDate ? format(endDate, "MMM dd, yyyy") : "End"}</p>
           
           <div class="summary">
-            <h2>Resumen</h2>
-            <p>Balance Neto: ${netBalance >= 0 ? '+' : ''}€${netBalance.toFixed(2)}</p>
+            <h2>Summary</h2>
+            <p>Net Balance: ${netBalance >= 0 ? "+" : ""}€${netBalance.toFixed(2)}</p>
           </div>
 
           <table>
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Descripción</th>
-                <th>Monto</th>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Amount</th>
               </tr>
             </thead>
             <tbody>
               ${sortedTransactions
-                .map(
-                  (t) => `
+        .map(
+          (t) => `
                 <tr>
-                  <td>${format(parseISO(t.date), 'dd/MM/yyyy')}</td>
+                  <td>${format(new Date(t.date), "MMM dd, yyyy")}</td>
                   <td>${t.description}</td>
-                  <td style="text-align: right; color: ${t.type === TransactionTypes.INCOME ? 'green' : 'red'}">
-                    ${t.type === TransactionTypes.INCOME ? '+' : '-'}€${t.amount.toFixed(2)}
+                  <td style="text-align: right; color: ${t.type === TransactionTypes.INCOME ? "green" : "red"}">
+                    ${t.type === TransactionTypes.INCOME ? "+" : "-"}€${t.amount.toFixed(2)}
                   </td>
                 </tr>
               `
-                )
-                .join('')}
+        )
+        .join("")}
               <tr class="total-row">
-                <td colspan="2">Balance Neto</td>
-                <td style="text-align: right; color: ${netBalance >= 0 ? 'green' : 'red'}">
-                  ${netBalance >= 0 ? '+' : ''}€${netBalance.toFixed(2)}
+                <td colspan="2">Net Balance</td>
+                <td style="text-align: right; color: ${netBalance >= 0 ? "green" : "red"}">
+                  ${netBalance >= 0 ? "+" : ""}€${netBalance.toFixed(2)}
                 </td>
               </tr>
             </tbody>
@@ -175,11 +174,15 @@ export default function Home() {
         </body>
       </html>
     `;
-  }, [transactions, startDate, endDate]);
+  };
 
-  const handleExportWithDates = useCallback(async () => {
+  const exportToPDF = () => {
+    setShowExportModal(true);
+  };
+
+  const handleExportWithDates = async () => {
     if (!startDate && !endDate) {
-      Alert.alert('Seleccionar rango de fechas', 'Por favor, selecciona un rango de fechas para exportar');
+      Alert.alert("Select Date Range", "Please select a date range to export");
       return;
     }
 
@@ -190,151 +193,101 @@ export default function Home() {
       });
 
       await Sharing.shareAsync(uri, {
-        UTI: '.pdf',
-        mimeType: 'application/pdf',
+        UTI: ".pdf",
+        mimeType: "application/pdf",
       });
 
       setShowExportModal(false);
     } catch (error) {
-      console.error('Error al generar PDF:', error);
-      Alert.alert('Error', 'No se pudo generar el informe PDF');
+      console.error("Error generating PDF:", error);
+      Alert.alert("Error", "Failed to generate PDF report");
     }
-  }, [startDate, endDate, createHTMLContent]);
+  };
 
-  const handleDelete = useCallback((id) => {
+  const handleDelete = (id) => {
     Alert.alert(
-      'Eliminar Transacción',
-      '¿Estás seguro de que quieres eliminar esta transacción?',
+      "Delete Transaction",
+      "Are you sure you want to delete this transaction?",
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Eliminar',
-          style: 'destructive',
+          text: "Delete",
+          style: "destructive",
           onPress: () => deleteTransaction(id)
         },
       ]
     );
-  }, [deleteTransaction]);
+  };
 
-  const toggleSection = useCallback((sectionId) => {
+  const toggleSection = (sectionId) => {
     setExpandedSections((prev) =>
       prev.includes(sectionId)
         ? prev.filter((id) => id !== sectionId)
         : [...prev, sectionId]
     );
-  }, []);
+  };
 
-  const handleDateChange = useCallback((event, selectedDate) => {
-    const currentDate = selectedDate || (showStartPicker ? startDate : endDate);
-    if (Platform.OS === 'android') {
-      setShowStartPicker(false);
-      setShowEndPicker(false);
+  const handleDateChange = (event, date, isStart = true) => {
+    if (Platform.OS === "android") {
+      isStart ? setShowStartPicker(false) : setShowEndPicker(false);
     }
-    if (showStartPicker) {
-      handleConfirmDate(currentDate, true);
-    } else {
-      handleConfirmDate(currentDate, false);
-    }
-  }, [handleConfirmDate, showStartPicker, startDate, endDate]);
 
-  const clearDates = useCallback(() => {
+    if (event.type === "set" && date) {
+      if (isStart) {
+        setStartDate(date);
+        if (endDate && date > endDate) {
+          setEndDate(date);
+        }
+      } else {
+        if (startDate && date < startDate) {
+          Alert.alert("Invalid Date", "End date cannot be before start date");
+          return;
+        }
+        setEndDate(date);
+      }
+    }
+  };
+
+  const clearDates = () => {
     setStartDate(null);
     setEndDate(null);
-  }, []);
+  };
 
-  const sections = useMemo(() => {
-    const filteredTransactions = transactions.filter((transaction) => {
+  const sections = transactions
+    .filter((transaction) => {
       if (!startDate && !endDate) return true;
-      const transactionDate = parseISO(transaction.date);
+      const transactionDate = new Date(transaction.date);
       const start = startDate || new Date(0);
       const end = endDate || new Date(2099, 11, 31);
       return isWithinInterval(transactionDate, { start, end });
-    });
-
-    const groups = filteredTransactions.reduce((acc, transaction) => {
-      const date = format(parseISO(transaction.date), 'yyyy-MM-dd');
-      if (!acc[date]) {
-        acc[date] = {
+    })
+    .reduce((groups, transaction) => {
+      const date = format(new Date(transaction.date), "yyyy-MM-dd");
+      if (!groups[date]) {
+        groups[date] = {
           id: date,
-          title: format(parseISO(transaction.date), 'dd/MM/yyyy'),
+          title: format(new Date(transaction.date), "MMM dd, yyyy"),
           data: [],
           balance: 0,
         };
       }
-      acc[date].data.push(transaction);
-      acc[date].balance +=
+      groups[date].data.push(transaction);
+      groups[date].balance +=
         transaction.type === TransactionTypes.INCOME
           ? transaction.amount
           : -transaction.amount;
-      return acc;
+      return groups;
     }, {});
 
-    return Object.values(groups)
-      .map((section) => ({
-        ...section,
-        data: expandedSections.includes(section.id) ? section.data : [],
-      }))
-      .sort((a, b) => parseISO(b.id).getTime() - parseISO(a.id).getTime());
-  }, [transactions, startDate, endDate, expandedSections]);
-
-  const renderItem = useCallback(({ item: transaction }) => (
-    <TouchableOpacity
-      style={styles.transaction}
-      onLongPress={() => handleDelete(transaction.id)}
-    >
-      <View style={styles.transactionInfo}>
-        <Text style={styles.transactionTitle}>
-          {transaction.description}
-        </Text>
-      </View>
-      <View style={styles.amountContainer}>
-        <MaterialIcons
-          name={transaction.type === TransactionTypes.INCOME ? 'arrow-upward' : 'arrow-downward'}
-          size={16}
-          color={transaction.type === TransactionTypes.INCOME ? Colors.income : Colors.expense}
-        />
-        <Text
-          style={[
-            styles.transactionAmount,
-            transaction.type === TransactionTypes.INCOME
-              ? styles.income
-              : styles.expense,
-          ]}
-        >
-          €{transaction.amount.toFixed(2)}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  ), [handleDelete]);
-
-  const renderSectionHeader = useCallback(({ section }) => (
-    <TouchableOpacity
-      style={styles.dateSection}
-      onPress={() => toggleSection(section.id)}
-    >
-      <View style={styles.dateSectionHeader}>
-        <View style={styles.dateSectionLeft}>
-          <MaterialIcons
-            name={expandedSections.includes(section.id) ? 'expand-more' : 'chevron-right'}
-            size={24}
-            color={Colors.text}
-          />
-          <Text style={styles.dateSectionTitle}>{section.title}</Text>
-        </View>
-        <Text
-          style={[
-            styles.dateSectionTotal,
-            section.balance >= 0 ? styles.income : styles.expense,
-          ]}
-        >
-          {section.balance >= 0 ? '+' : ''}€{section.balance.toFixed(2)}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  ), [expandedSections, toggleSection]);
+  const sectionList = Object.values(sections)
+    .map((section) => ({
+      ...section,
+      data: expandedSections.includes(section.id) ? section.data : [],
+    }))
+    .sort((a, b) => new Date(b.id).getTime() - new Date(a.id).getTime());
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
       {/* Header Section */}
@@ -343,9 +296,9 @@ export default function Home() {
           <Text style={styles.monthText}>
             {format(new Date(), 'MMMM yyyy')}
           </Text>
-          <Text style={styles.balanceTitle}>Balance del Mes Actual</Text>
+          <Text style={styles.balanceTitle}>Current Month Balance</Text>
           <Text style={[styles.balanceAmount, getCurrentMonthBalance() < 0 && styles.negative]}>
-            {getCurrentMonthBalance() >= 0 ? '+' : ''}€{getCurrentMonthBalance().toFixed(2)}
+            {getCurrentMonthBalance() >= 0 ? "" : ""}€{getCurrentMonthBalance().toFixed(2)}
           </Text>
         </View>
         <TouchableOpacity
@@ -360,18 +313,18 @@ export default function Home() {
       <View style={styles.quickActions}>
         <TouchableOpacity
           style={styles.quickActionButton}
-          onPress={() => router.push('/add-transaction')}
+          onPress={() => router.push("/add-transaction")}
         >
           <MaterialIcons name="add" size={24} color={Colors.primary} />
-          <Text style={styles.quickActionText}>Añadir</Text>
+          <Text style={styles.quickActionText}>Add</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.quickActionButton}
-          onPress={() => setShowExportModal(true)}
+          onPress={exportToPDF}
         >
           <MaterialIcons name="picture-as-pdf" size={24} color={Colors.primary} />
-          <Text style={styles.quickActionText}>Exportar</Text>
+          <Text style={styles.quickActionText}>Export</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -379,7 +332,7 @@ export default function Home() {
           onPress={handleImport}
         >
           <MaterialIcons name="file-upload" size={24} color={Colors.primary} />
-          <Text style={styles.quickActionText}>Importar</Text>
+          <Text style={styles.quickActionText}>Import</Text>
         </TouchableOpacity>
       </View>
 
@@ -387,22 +340,104 @@ export default function Home() {
       <SectionList
         style={styles.sectionList}
         contentContainerStyle={styles.sectionListContent}
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        renderSectionHeader={renderSectionHeader}
+        sections={sectionList}
+        keyExtractor={(item, index) => item.id || index.toString()}
+        renderItem={({ item: transaction }) => (
+          <TouchableOpacity
+            style={styles.transaction}
+            onLongPress={() => handleDelete(transaction.id)}
+          >
+            <View style={styles.transactionInfo}>
+              <Text style={styles.transactionTitle}>
+                {transaction.description}
+              </Text>
+            </View>
+            <View style={styles.amountContainer}>
+              <MaterialIcons
+                name={transaction.type === TransactionTypes.INCOME ? "arrow-upward" : "arrow-downward"}
+                size={16}
+                color={transaction.type === TransactionTypes.INCOME ? Colors.income : Colors.expense}
+              />
+              <Text
+                style={[
+                  styles.transactionAmount,
+                  transaction.type === TransactionTypes.INCOME
+                    ? styles.income
+                    : styles.expense,
+                ]}
+              >
+                €{transaction.amount.toFixed(2)}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        renderSectionHeader={({ section }) => (
+          <TouchableOpacity
+            style={styles.dateSection}
+            onPress={() => toggleSection(section.id)}
+          >
+            <View style={styles.dateSectionHeader}>
+              <View style={styles.dateSectionLeft}>
+                <MaterialIcons
+                  name={expandedSections.includes(section.id) ? "expand-more" : "chevron-right"}
+                  size={24}
+                  color={Colors.text}
+                />
+                <Text style={styles.dateSectionTitle}>{section.title}</Text>
+              </View>
+              <Text
+                style={[
+                  styles.dateSectionTotal,
+                  section.balance >= 0 ? styles.income : styles.expense,
+                ]}
+              >
+                {section.balance >= 0 ? "+" : ""}€{section.balance.toFixed(2)}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
       />
-
       {/* Date Pickers */}
-      {(showStartPicker || showEndPicker) && (
-        <DateTimePicker
-          value={showStartPicker ? (startDate || new Date()) : (endDate || new Date())}
-          mode="date"
-          display="default"
-          onChange={handleDateChange}
-          minimumDate={showEndPicker ? startDate : undefined}
-        />
+      {Platform.OS === 'ios' ? (
+        <>
+          <DateTimePickerModal
+            isVisible={showStartPicker}
+            mode="date"
+            onConfirm={(date) => handleConfirmDate(date, true)}
+            onCancel={() => setShowStartPicker(false)}
+            date={startDate || new Date()}
+          />
+          <DateTimePickerModal
+            isVisible={showEndPicker}
+            mode="date"
+            onConfirm={(date) => handleConfirmDate(date, false)}
+            onCancel={() => setShowEndPicker(false)}
+            date={endDate || new Date()}
+            minimumDate={startDate}
+          />
+        </>
+      ) : (
+        <>
+          {showStartPicker && (
+            <DateTimePicker
+              value={startDate || new Date()}
+              mode="date"
+              display="default"
+              onChange={(event, date) => handleDateChange(event, date, true)}
+            />
+          )}
+          {showEndPicker && (
+            <DateTimePicker
+              value={endDate || new Date()}
+              mode="date"
+              display="default"
+              onChange={(event, date) => handleDateChange(event, false)}
+              minimumDate={startDate}
+            />
+          )}
+        </>
       )}
+
 
       {/* Export Date Filter Modal */}
       <Modal
@@ -414,7 +449,7 @@ export default function Home() {
         <View style={styles.exportModalOverlay}>
           <View style={styles.exportModalContent}>
             <View style={styles.exportModalHeader}>
-              <Text style={styles.exportModalTitle}>Seleccionar Rango de Fechas</Text>
+              <Text style={styles.exportModalTitle}>Select Date Range</Text>
               <TouchableOpacity
                 onPress={() => setShowExportModal(false)}
                 style={styles.closeButton}
@@ -431,7 +466,7 @@ export default function Home() {
                 >
                   <MaterialIcons name="event" size={20} color={Colors.primary} />
                   <Text style={styles.dateButtonText}>
-                    {startDate ? format(startDate, 'dd/MM/yyyy') : 'Fecha Inicial'}
+                    {startDate ? format(startDate, "MMM dd, yyyy") : "Start Date"}
                   </Text>
                 </TouchableOpacity>
 
@@ -443,7 +478,7 @@ export default function Home() {
                 >
                   <MaterialIcons name="event" size={20} color={Colors.primary} />
                   <Text style={styles.dateButtonText}>
-                    {endDate ? format(endDate, 'dd/MM/yyyy') : 'Fecha Final'}
+                    {endDate ? format(endDate, "MMM dd, yyyy") : "End Date"}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -454,7 +489,7 @@ export default function Home() {
                   onPress={clearDates}
                 >
                   <MaterialIcons name="clear" size={20} color={Colors.white} />
-                  <Text style={styles.clearDateButtonText}>Limpiar Fechas</Text>
+                  <Text style={styles.clearDateButtonText}>Clear Dates</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -464,7 +499,7 @@ export default function Home() {
               onPress={handleExportWithDates}
             >
               <MaterialIcons name="file-download" size={20} color={Colors.white} />
-              <Text style={styles.exportButtonText}>Exportar a PDF</Text>
+              <Text style={styles.exportButtonText}>Export to PDF</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -481,32 +516,30 @@ export default function Home() {
           activeOpacity={1}
           onPress={() => setMenuVisible(false)}
         >
-          <View style={styles.menuContent}>
+          <TouchableOpacity
+            style={styles.menuContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()} // Prevent touch events from bubbling up
+          >
             <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                handleExport();
-                setMenuVisible(false);
-              }}
+              style={styles.quickActionButton}
+              onPress={handleExport}
             >
-              <MaterialIcons name="file-download" size={24} color={Colors.primary} />
-              <Text style={styles.menuItemText}>Exportar</Text>
+              <MaterialIcons name="file-download" size={32} color={Colors.primary} />
+              <Text style={styles.quickActionText}>Export</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                handleImport();
-                setMenuVisible(false);
-              }}
+              style={styles.quickActionButton}
+              onPress={handleImport}
             >
-              <MaterialIcons name="file-upload" size={24} color={Colors.primary} />
-              <Text style={styles.menuItemText}>Importar</Text>
+              <MaterialIcons name="file-upload" size={32} color={Colors.primary} />
+              <Text style={styles.quickActionText}>Import</Text>
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -518,6 +551,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: Colors.primary,
     padding: 20,
+    paddingTop: Platform.OS === "ios" ? 60 : 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -563,7 +597,7 @@ const styles = StyleSheet.create({
   quickActionText: {
     color: Colors.text,
     marginTop: 4,
-    fontSize: 12,
+    fontSize: 18,
   },
   sectionList: {
     flex: 1,
@@ -575,7 +609,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: Colors.border,
   },
   dateSectionHeader: {
@@ -603,7 +637,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: Colors.border,
   },
   transactionInfo: {
