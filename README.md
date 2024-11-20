@@ -10,6 +10,8 @@ Transaction Tracker is a mobile application built with React Native that helps u
 - Support for both Income and Expense transactions
 - Multiple input fields for detailed transaction logging
 - Flexible input based on transaction type
+- import and export to json file
+
 
 ### Income Tracking
 - Predefined income sources:
@@ -25,6 +27,7 @@ Transaction Tracker is a mobile application built with React Native that helps u
 - Individual amount tracking
 
 ### Additional Capabilities
+- Export to preformated pdf file
 - Date selection for transactions
 - Real-time total amount calculation
 - Responsive design for iOS and Android
