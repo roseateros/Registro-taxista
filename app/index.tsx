@@ -46,6 +46,30 @@ export default function Home() {
       return total;
     }, 0);
   }, [transactions]);
+  const getMonthTotalExpense = useCallback((date) => {
+    const start = startOfMonth(date);
+    const end = endOfMonth(date);
+
+    return transactions.reduce((total, transaction) => {
+      const transactionDate = parseISO(transaction.date);
+      if (isWithinInterval(transactionDate, { start, end })) {
+        return total + (transaction.type === TransactionTypes.EXPENSE ? -transaction.amount : 0);
+      }
+      return total;
+    }, 0);
+  }, [transactions]);
+  const getMonthTotalIncome = useCallback((date) => {
+    const start = startOfMonth(date);
+    const end = endOfMonth(date);
+
+    return transactions.reduce((total, transaction) => {
+      const transactionDate = parseISO(transaction.date);
+      if (isWithinInterval(transactionDate, { start, end })) {
+        return total + (transaction.type === TransactionTypes.INCOME ? transaction.amount :0);
+      }
+      return total;
+    }, 0);
+  }, [transactions]);
 
   const handleConfirmDate = useCallback((date, isStart = true, isMonthPicker = false) => {
     if (isMonthPicker) {
@@ -88,87 +112,121 @@ const handleImport = async () => {
   };
 
   const createHTMLContent = useCallback(() => {
-    let netBalance = 0;
+  let totalIncome = 0;
+  let totalExpenses = 0;
 
-    const filteredTransactions = transactions.filter((transaction) => {
-      if (!startDate && !endDate) return true;
-      const transactionDate = parseISO(transaction.date);
-      const start = startDate || new Date(0);
-      const end = endDate || new Date(2099, 11, 31);
-      return isWithinInterval(transactionDate, { start, end });
-    });
+  const filteredTransactions = transactions.filter((transaction) => {
+    if (!startDate && !endDate) return true;
+    const transactionDate = parseISO(transaction.date);
+    const start = startDate || new Date(0);
+    const end = endDate || new Date(2099, 11, 31);
+    return isWithinInterval(transactionDate, { start, end });
+  });
 
-    const sortedTransactions = [...filteredTransactions].sort(
-      (a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()
-    );
+  const sortedTransactions = [...filteredTransactions].sort(
+    (a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()
+  );
 
-    sortedTransactions.forEach((t) => {
-      netBalance += t.type === TransactionTypes.INCOME ? t.amount : -t.amount;
-    });
+  sortedTransactions.forEach((t) => {
+    if (t.type === TransactionTypes.INCOME) {
+      totalIncome += t.amount;
+    } else {
+      totalExpenses += t.amount;
+    }
+  });
 
-    return `<!DOCTYPE html>
+  const netBalance = totalIncome - totalExpenses;
+
+  return `<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Informe de ganancias con taxi </title>
+    <title>Taxi Earnings Report</title>
+    <style>
+        .income { color: #08612DFF; }
+        .expense { color: #c0392b; }
+        .total-row { background-color: #f8f9fa; font-weight: bold; }
+    </style>
 </head>
 <body style="font-family: Arial, sans-serif; font-size: 14px; color: #333; margin: 20px; padding: 0; background-color: #fff;">
 
     <!-- Header -->
-    <div class="header" style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #444; font-weight: normal; margin-bottom: 10px;">Informe de ganancias con taxi</h1>
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h1 style="color: #444; font-weight: normal; margin-bottom: 10px;">Taxi Earnings Report</h1>
         <div style="font-size: 12px; color: #08612DFF;">
-            Período: ${startDate ? format(startDate, 'dd/MM/yyyy') : 'Inicio'} - ${endDate ? format(endDate, 'dd/MM/yyyy') : 'Fin'}
+            Period: ${startDate ? format(startDate, 'dd/MM/yyyy') : 'Start'} - ${endDate ? format(endDate, 'dd/MM/yyyy') : 'End'}
         </div>
     </div>
 
     <!-- Summary -->
-    <div class="summary" style="margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9;">
-        <h2 style="color: #444; font-weight: normal; margin-bottom: 10px;">Resumen de los movimientos</h2>
-        <p style="margin: 0;">Balance Neto: 
-            <span style="font-weight: bold; color: ${netBalance >= 0 ? '#08612DFF' : '#c0392b'};">
-                €${netBalance.toFixed(2)}
-            </span>
-        </p>
+    <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9;">
+        <h2 style="color: #444; font-weight: normal; margin-bottom: 10px;">Financial Summary</h2>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+            <div>
+                <p style="margin: 0; font-weight: bold;">Total Income:</p>
+                <p style="margin: 5px 0; color: #08612DFF;">€${totalIncome.toFixed(2)}</p>
+            </div>
+            <div>
+                <p style="margin: 0; font-weight: bold;">Total Expenses:</p>
+                <p style="margin: 5px 0; color: #c0392b;">€${totalExpenses.toFixed(2)}</p>
+            </div>
+            <div>
+                <p style="margin: 0; font-weight: bold;">Net Balance:</p>
+                <p style="margin: 5px 0; color: ${netBalance >= 0 ? '#08612DFF' : '#c0392b'};">
+                    €${netBalance.toFixed(2)}
+                </p>
+            </div>
+        </div>
     </div>
 
-    <!-- Transaction Table -->
+    <!-- Transactions Table -->
     <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
         <thead>
             <tr>
-                <th style="text-align: left; padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;">Fecha</th>
-                <th style="text-align: left; padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;">Descripción</th>
-                <th style="text-align: left; padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;">Cantidad</th>
+                <th style="text-align: left; padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;">Date</th>
+                <th style="text-align: left; padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;">Description</th>
+                <th style="text-align: right; padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;">Income</th>
+                <th style="text-align: right; padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;">Expense</th>
             </tr>
         </thead>
         <tbody>
-            ${sortedTransactions.map((t) => `
+            ${sortedTransactions.map(t => `
                 <tr>
                     <td style="padding: 8px; border: 1px solid #ddd;">${format(parseISO(t.date), 'dd/MM/yyyy')}</td>
                     <td style="padding: 8px; border: 1px solid #ddd;">${t.description}</td>
-                    <td style="padding: 8px; text-align: right; border: 1px solid #ddd; color: ${t.type === TransactionTypes.INCOME ? '#08612DFF' : '#c0392b'};">
-                        ${t.type === TransactionTypes.INCOME ? '+' : '-'}€${t.amount.toFixed(2)}
+                    <td style="padding: 8px; text-align: right; border: 1px solid #ddd; color: #08612DFF;">
+                        ${t.type === TransactionTypes.INCOME ? '€' + t.amount.toFixed(2) : '-'}
+                    </td>
+                    <td style="padding: 8px; text-align: right; border: 1px solid #ddd; color: #c0392b;">
+                        ${t.type === TransactionTypes.EXPENSE ? '€' + t.amount.toFixed(2) : '-'}
                     </td>
                 </tr>`).join('')}
-            <tr>
-                <td colspan="2" style="font-weight: bold; padding: 8px; border: 1px solid #ddd;">Balance Neto</td>
-                <td style="padding: 8px; text-align: right; font-weight: bold; border: 1px solid #ddd; color: ${netBalance >= 0 ? '#08612DFF' : '#c0392b'};">
-                    ${netBalance >= 0 ? '+' : ''}€${netBalance.toFixed(2)}
+            <tr class="total-row">
+                <td colspan="2" style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Totals</td>
+                <td style="padding: 8px; text-align: right; border: 1px solid #ddd; color: #08612DFF; font-weight: bold;">
+                    €${totalIncome.toFixed(2)}
+                </td>
+                <td style="padding: 8px; text-align: right; border: 1px solid #ddd; color: #c0392b; font-weight: bold;">
+                    €${totalExpenses.toFixed(2)}
+                </td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="2" style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Net Balance</td>
+                <td colspan="2" style="padding: 8px; text-align: right; border: 1px solid #ddd; color: ${netBalance >= 0 ? '#08612DFF' : '#c0392b'}; font-weight: bold;">
+                    €${netBalance.toFixed(2)}
                 </td>
             </tr>
         </tbody>
     </table>
 
     <!-- Footer -->
-    <div class="footer" style="text-align: center; font-size: 12px; color: #08612DFF; border-top: 1px solid #ddd; padding-top: 10px;">
-        Informe generado automáticamente | ${format(new Date(), 'dd/MM/yyyy HH:mm')}
+    <div style="text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; margin-top: 20px;">
+        Report generated on ${format(new Date(), 'dd/MM/yyyy HH:mm')}
     </div>
 </body>
-</html>
-
-`;
-  }, [transactions, startDate, endDate]);
+</html>`;
+}, [transactions, startDate, endDate]);
 
   const handleExportToPDF = useCallback(async () => {
     try {
@@ -327,10 +385,16 @@ const handleImport = async () => {
             </Text>
             <MaterialIcons name="arrow-drop-down" size={24} color={Colors.white} />
           </TouchableOpacity>
-          <Text style={styles.balanceTitle}>Selected month's total balance</Text>
-          <Text style={[styles.balanceAmount, getMonthBalance(selectedMonth) < 0 && styles.negative]}>
-            {getMonthBalance(selectedMonth) >= 0 ? '' : ''}€{getMonthBalance(selectedMonth).toFixed(2)}
+          
+          <Text style={[styles.balanceAmount, getMonthTotalIncome(selectedMonth) < 0 && styles.negative]}>
+            {getMonthTotalIncome(selectedMonth) >= 0 ? 'Total: ' : ''}€{getMonthTotalIncome(selectedMonth).toFixed(2)}
           </Text>
+          <Text style={styles.balanceTitle}>
+          Total Expenses: €{Math.abs(getMonthTotalExpense(selectedMonth)).toFixed(2)} 
+          </Text> 
+          <Text style={styles.balanceTitle}>
+          Net Income: €{Math.abs(getMonthBalance(selectedMonth)).toFixed(2)}
+</Text>
         </View>
        <TouchableOpacity
       style={styles.menuButton}
