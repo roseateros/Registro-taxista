@@ -189,12 +189,12 @@ const handleImport = async () => {
 
   const handleDelete = useCallback((id) => {
     Alert.alert(
-      'Eliminar Transacción',
-      '¿Estás seguro de que quieres eliminar esta transacción?',
+      'Delete registry',
+      'Do you want to delete this transaction?',
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: 'Delete',
           style: 'destructive',
           onPress: () => deleteTransaction(id)
         },
@@ -234,7 +234,7 @@ const handleImport = async () => {
       if (!acc[date]) {
         acc[date] = {
           id: date,
-          title: format(parseISO(transaction.date), 'dd/MM/yyyy'),
+          title: format(parseISO(transaction.date), 'dd MMMM yyyy'),
           data: [],
           balance: 0,
         };
@@ -265,7 +265,7 @@ const handleImport = async () => {
           {transaction.description}
         </Text>
         <Text style={styles.transactionDate}>
-          {format(parseISO(transaction.date), 'HH:mm')}
+          {format(parseISO(transaction.date), 'hh:mm aa')}
         </Text>
       </View>
       <View style={styles.amountContainer}>
@@ -327,7 +327,7 @@ const handleImport = async () => {
             </Text>
             <MaterialIcons name="arrow-drop-down" size={24} color={Colors.white} />
           </TouchableOpacity>
-          <Text style={styles.balanceTitle}>Selected month's available balance</Text>
+          <Text style={styles.balanceTitle}>Selected month's total balance</Text>
           <Text style={[styles.balanceAmount, getMonthBalance(selectedMonth) < 0 && styles.negative]}>
             {getMonthBalance(selectedMonth) >= 0 ? '+' : ''}€{getMonthBalance(selectedMonth).toFixed(2)}
           </Text>
@@ -350,7 +350,7 @@ const handleImport = async () => {
           onPress={() => router.push('/add-transaction')}
         >
           <MaterialIcons name="add" size={26} color={Colors.primary} />
-          <Text style={styles.quickActionText}>Añadir</Text>
+          <Text style={styles.quickActionText}>Add new</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -358,7 +358,7 @@ const handleImport = async () => {
           onPress={() => setShowFilterModal(true)}
         >
           <MaterialIcons name="filter-list" size={26} color={Colors.primary} />
-          <Text style={styles.quickActionText}>Filtrar</Text>
+          <Text style={styles.quickActionText}>Filters</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -366,7 +366,7 @@ const handleImport = async () => {
           onPress={handleExportToPDF}
         >
           <MaterialIcons name="picture-as-pdf" size={26} color={Colors.primary} />
-          <Text style={styles.quickActionText}>Exportar PDF</Text>
+          <Text style={styles.quickActionText}>Generate PDF</Text>
         </TouchableOpacity>
       </View>
 
@@ -417,7 +417,7 @@ const handleImport = async () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filtrar Transacciones</Text>
+              <Text style={styles.modalTitle}>Filter by Date Range</Text>
               <TouchableOpacity
                 onPress={() => setShowFilterModal(false)}
                 style={styles.closeButton}
@@ -434,7 +434,7 @@ const handleImport = async () => {
                 >
                   <MaterialIcons name="event" size={20} color={Colors.primary} />
                   <Text style={styles.dateButtonText}>
-                    {startDate ? format(startDate, 'dd/MM/yyyy') : 'Fecha Inicial'}
+                    {startDate ? format(startDate, 'dd/MM/yyyy') : 'FROM'}
                   </Text>
                 </TouchableOpacity>
 
@@ -446,7 +446,7 @@ const handleImport = async () => {
                 >
                   <MaterialIcons name="event" size={20} color={Colors.primary} />
                   <Text style={styles.dateButtonText}>
-                    {endDate ? format(endDate, 'dd/MM/yyyy') : 'Fecha Final'}
+                    {endDate ? format(endDate, 'dd/MM/yyyy') : 'TO'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -457,7 +457,7 @@ const handleImport = async () => {
                   onPress={clearDates}
                 >
                   <MaterialIcons name="clear" size={20} color={Colors.white} />
-                  <Text style={styles.clearDateButtonText}>Limpiar Fechas</Text>
+                  <Text style={styles.clearDateButtonText}>Clear Filter</Text>
                 </TouchableOpacity>
               )}
             </View>

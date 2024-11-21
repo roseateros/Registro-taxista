@@ -27,7 +27,7 @@ export default function App() {
                     <Stack.Screen
                         name="Home"
                         component={HomeScreen}
-                        options={{ title: 'Expense Tracker' }}
+                        options={{ title: 'Taxi Balance' }}
                     />
                     <Stack.Screen
                         name="AddTransaction"

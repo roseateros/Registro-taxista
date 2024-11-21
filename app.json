@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "expense-tracker",
-    "slug": "expense-tracker",
+    "name": "TaxiBalance Pro",
+    "slug": "taxi-balance-pro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,7 +15,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.roseateros.expensetracker",
+      "bundleIdentifier": "com.roseateros.taxibalancepro",
       "infoPlist": {
         "UIFileSharingEnabled": true,
         "LSSupportsOpeningDocumentsInPlace": true,
@@ -31,7 +31,7 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE"
       ],
-      "package": "com.roseateros.expensetracker"
+      "package": "com.roseateros.taxibalancepro"
     },
     "web": {
       "bundler": "metro",
