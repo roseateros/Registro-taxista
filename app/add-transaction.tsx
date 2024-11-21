@@ -25,7 +25,7 @@ type InputField = {
   amount: string;
 };
 
-const INCOME_SOURCES = ['Taximeter Card', 'Taximeter Cash', 'FreeNow App Cash', 'FreeNow App Card', 'FreeNow Via App', 'Tips and other'];
+const INCOME_SOURCES = ['Taximeter Card', 'Taximeter Cash', 'FreeNow App Cash', 'FreeNow App Card', 'FreeNow Via App','FreeNow via Taximeter', 'Tips and other'];
 
 const getInitialFields = (type: TransactionTypes): InputField[] => {
   if (type === TransactionTypes.INCOME) {

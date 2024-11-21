@@ -10,6 +10,7 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
     return (
+        
         <TransactionsProvider>
             <NavigationContainer>
                 <Stack.Navigator

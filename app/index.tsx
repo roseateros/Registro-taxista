@@ -69,37 +69,23 @@ export default function Home() {
     setShowMonthPicker(false);
   }, [startDate, endDate]);
 
-  const handleImport = useCallback(async () => {
+const handleImport = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
-      if (result.type === 'success') {
-        const content = await FileSystem.readAsStringAsync(result.uri);
-        const importedTransactions = JSON.parse(content);
-        await importTransactions(importedTransactions);
-        Alert.alert('Success', 'Transactions imported successfully!');
-      }
+      await importTransactions();
+      Alert.alert("Success", "Transactions imported successfully!");
     } catch (error) {
-      console.error('Error importing transactions:', error);
-      Alert.alert('Error', 'Failed to import transactions.');
+      Alert.alert("Error", "Failed to import transactions.");
     }
-  }, [importTransactions]);
+  };
 
-  const handleExport = useCallback(async () => {
+  const handleExport = async () => {
     try {
-      const content = JSON.stringify(transactions);
-      const fileUri = FileSystem.documentDirectory + 'transactions.json';
-      await FileSystem.writeAsStringAsync(fileUri, content);
-      if (Platform.OS === 'ios') {
-        await Sharing.shareAsync(fileUri, { UTI: 'public.json' });
-      } else {
-        await Sharing.shareAsync(fileUri, { mimeType: 'application/json' });
-      }
-      Alert.alert('Success', 'Transactions exported successfully!');
+      await exportTransactions();
+      Alert.alert("Success", "Transactions exported successfully!");
     } catch (error) {
-      console.error('Error exporting transactions:', error);
-      Alert.alert('Error', 'Failed to export transactions.');
+      Alert.alert("Error", "Failed to export transactions.");
     }
-  }, [transactions]);
+  };
 
   const createHTMLContent = useCallback(() => {
     let netBalance = 0;
