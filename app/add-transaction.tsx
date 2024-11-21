@@ -373,15 +373,15 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '400',
     color: Colors.text,
-    marginBottom: 6,
+    marginBottom: 2,
   },
   descriptionInput: {
     fontSize: 16,
     color: Colors.text,
-    marginBottom: 6,
-    padding: 0,
+    marginBottom: 12,
+    padding: 6,
   },
   amountContainer: {
     flexDirection: 'row',
@@ -427,14 +427,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   submitButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 8,
-    marginTop: 16,
-    gap: 8,
-  },
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 16,
+  borderRadius: 8,
+  marginTop: 16,
+  gap: 8,
+  ...Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    android: {
+      elevation: 3,
+    },
+  }),
+},
   submitButtonText: {
     fontSize: 18,
     fontWeight: '600',

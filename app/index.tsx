@@ -106,83 +106,68 @@ const handleImport = async () => {
       netBalance += t.type === TransactionTypes.INCOME ? t.amount : -t.amount;
     });
 
-    return `
-      <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-          <style>
-            body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-              padding: 20px;
-              font-size: 14px;
-            }
-            table { 
-              width: 100%; 
-              border-collapse: collapse; 
-              margin-bottom: 20px;
-            }
-            th, td { 
-              border: 1px solid #ddd; 
-              padding: 8px; 
-              text-align: left;
-            }
-            th { 
-              background-color: #f2f2f2; 
-            }
-            .summary { 
-              margin: 20px 0;
-              padding: 15px;
-              background-color: #f8f9fa;
-              border-radius: 5px;
-            }
-            .total-row {
-              font-weight: bold;
-              background-color: #f8f9fa;
-            }
-          </style>
-        </head>
-        <body>
-          <h1>Informe de Transacciones</h1>
-          <p>Período: ${startDate ? format(startDate, 'dd/MM/yyyy') : 'Inicio'} a ${endDate ? format(endDate, 'dd/MM/yyyy') : 'Fin'}</p>
-          
-          <div class="summary">
-            <h2>Resumen</h2>
-            <p>Balance Neto: ${netBalance >= 0 ? '+' : ''}€${netBalance.toFixed(2)}</p>
-          </div>
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe de ganancias con taxi </title>
+</head>
+<body style="font-family: Arial, sans-serif; font-size: 14px; color: #333; margin: 20px; padding: 0; background-color: #fff;">
 
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Descripción</th>
-                <th>Monto</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${sortedTransactions
-                .map(
-                  (t) => `
+    <!-- Header -->
+    <div class="header" style="text-align: center; margin-bottom: 20px;">
+        <h1 style="color: #444; font-weight: normal; margin-bottom: 10px;">Informe de ganancias con taxi</h1>
+        <div style="font-size: 12px; color: #08612DFF;">
+            Período: ${startDate ? format(startDate, 'dd/MM/yyyy') : 'Inicio'} - ${endDate ? format(endDate, 'dd/MM/yyyy') : 'Fin'}
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary" style="margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9;">
+        <h2 style="color: #444; font-weight: normal; margin-bottom: 10px;">Resumen de los movimientos</h2>
+        <p style="margin: 0;">Balance Neto: 
+            <span style="font-weight: bold; color: ${netBalance >= 0 ? '#08612DFF' : '#c0392b'};">
+                €${netBalance.toFixed(2)}
+            </span>
+        </p>
+    </div>
+
+    <!-- Transaction Table -->
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+            <tr>
+                <th style="text-align: left; padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;">Fecha</th>
+                <th style="text-align: left; padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;">Descripción</th>
+                <th style="text-align: left; padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;">Cantidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${sortedTransactions.map((t) => `
                 <tr>
-                  <td>${format(parseISO(t.date), 'dd/MM/yyyy')}</td>
-                  <td>${t.description}</td>
-                  <td style="text-align: right; color: ${t.type === TransactionTypes.INCOME ? 'green' : 'red'}">
-                    ${t.type === TransactionTypes.INCOME ? '+' : '-'}€${t.amount.toFixed(2)}
-                  </td>
-                </tr>
-              `
-                )
-                .join('')}
-              <tr class="total-row">
-                <td colspan="2">Balance Neto</td>
-                <td style="text-align: right; color: ${netBalance >= 0 ? 'green' : 'red'}">
-                  ${netBalance >= 0 ? '+' : ''}€${netBalance.toFixed(2)}
+                    <td style="padding: 8px; border: 1px solid #ddd;">${format(parseISO(t.date), 'dd/MM/yyyy')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">${t.description}</td>
+                    <td style="padding: 8px; text-align: right; border: 1px solid #ddd; color: ${t.type === TransactionTypes.INCOME ? '#08612DFF' : '#c0392b'};">
+                        ${t.type === TransactionTypes.INCOME ? '+' : '-'}€${t.amount.toFixed(2)}
+                    </td>
+                </tr>`).join('')}
+            <tr>
+                <td colspan="2" style="font-weight: bold; padding: 8px; border: 1px solid #ddd;">Balance Neto</td>
+                <td style="padding: 8px; text-align: right; font-weight: bold; border: 1px solid #ddd; color: ${netBalance >= 0 ? '#08612DFF' : '#c0392b'};">
+                    ${netBalance >= 0 ? '+' : ''}€${netBalance.toFixed(2)}
                 </td>
-              </tr>
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Footer -->
+    <div class="footer" style="text-align: center; font-size: 12px; color: #08612DFF; border-top: 1px solid #ddd; padding-top: 10px;">
+        Informe generado automáticamente | ${format(new Date(), 'dd/MM/yyyy HH:mm')}
+    </div>
+</body>
+</html>
+
+`;
   }, [transactions, startDate, endDate]);
 
   const handleExportToPDF = useCallback(async () => {
@@ -347,12 +332,15 @@ const handleImport = async () => {
             {getMonthBalance(selectedMonth) >= 0 ? '+' : ''}€{getMonthBalance(selectedMonth).toFixed(2)}
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => setMenuVisible(true)}
-        >
-          <MaterialIcons name="more-vert" size={24} color={Colors.white} />
-        </TouchableOpacity>
+       <TouchableOpacity
+      style={styles.menuButton}
+      onPress={() => setMenuVisible(true)}
+    >
+      <View style={styles.iconContainer}>
+        <MaterialIcons name="settings" size={24} color={Colors.white} />
+        <Text style={styles.buttonText}>PRO</Text> 
+      </View>
+    </TouchableOpacity>
       </View>
 
       {/* Quick Actions */}
@@ -361,7 +349,7 @@ const handleImport = async () => {
           style={styles.quickActionButton}
           onPress={() => router.push('/add-transaction')}
         >
-          <MaterialIcons name="add" size={24} color={Colors.primary} />
+          <MaterialIcons name="add" size={26} color={Colors.primary} />
           <Text style={styles.quickActionText}>Añadir</Text>
         </TouchableOpacity>
 
@@ -369,7 +357,7 @@ const handleImport = async () => {
           style={styles.quickActionButton}
           onPress={() => setShowFilterModal(true)}
         >
-          <MaterialIcons name="filter-list" size={24} color={Colors.primary} />
+          <MaterialIcons name="filter-list" size={26} color={Colors.primary} />
           <Text style={styles.quickActionText}>Filtrar</Text>
         </TouchableOpacity>
 
@@ -377,7 +365,7 @@ const handleImport = async () => {
           style={styles.quickActionButton}
           onPress={handleExportToPDF}
         >
-          <MaterialIcons name="picture-as-pdf" size={24} color={Colors.primary} />
+          <MaterialIcons name="picture-as-pdf" size={26} color={Colors.primary} />
           <Text style={styles.quickActionText}>Exportar PDF</Text>
         </TouchableOpacity>
       </View>
@@ -555,8 +543,26 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
   },
-  menuButton: {
-    padding: 8,
+   menuButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 4,
+    borderRadius: 50, // Circular button if needed
+    backgroundColor: Colors.primary, // Button color
+  },
+  iconContainer: {
+    alignItems: 'center', // Center the icon and text
+    justifyContent: 'center',
+    borderColor: Colors.white,  // Border color (green in this case)
+    borderWidth: 1, // Thickness of the border
+    backgroundColor: Colors.primary,  // Background color (green)
+    borderRadius: 5,  // To make the container circular or rounded
+    padding: 10, // Padding inside the container to give space around the icon and text
+  },
+  buttonText: {
+    marginTop: 2, // Space between icon and text
+    color: Colors.white, // Text color
+    fontSize: 12, // Adjust text size as needed
   },
   quickActions: {
     flexDirection: 'row',
@@ -578,7 +584,7 @@ const styles = StyleSheet.create({
   quickActionText: {
     color: Colors.text,
     marginTop: 4,
-    fontSize: 12,
+    fontSize: 14,
   },
   sectionList: {
     flex: 1,
@@ -612,9 +618,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   transaction: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.LightOrange,
     paddingVertical: 12,
     paddingHorizontal: 16,
+    paddingLeft:48,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -630,7 +637,7 @@ const styles = StyleSheet.create({
   },
   transactionDate: {
     fontSize: 12,
-    color: Colors.textLight,
+    color: Colors.text,
     marginTop: 4,
   },
   amountContainer: {
@@ -651,15 +658,20 @@ const styles = StyleSheet.create({
   negative: {
     color: Colors.expense,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
+modalOverlay: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0,0,0,0.5)', // Semi-transparent background
+  justifyContent: 'center', // Center vertically
+  alignItems: 'center',      // Center horizontally
+  zIndex: 1000,              // Ensure it's above other content
+},
   modalContent: {
     backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 20,
     padding: 20,
   },
   modalHeader: {
@@ -725,15 +737,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   menuOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0,0,0,0.5)', // Semi-transparent background
+  justifyContent: 'center', // Center vertically
+  alignItems: 'center',      // Center horizontally
+  zIndex: 1000,              // Ensure it's above other content
+},
+
   menuContent: {
     backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 16,
+    borderRadius: 20,
+    padding: 60,
   },
   menuItem: {
     flexDirection: 'row',
