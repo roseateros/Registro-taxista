@@ -8,12 +8,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   FlatList,
-  Modal,
   Keyboard,
   TouchableWithoutFeedback,
   Dimensions,
+  ScrollView,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { format } from 'date-fns';
 import { useTransactions, TransactionTypes } from '../context/TransactionsContext';
 import Colors from '../constants/Colors';
@@ -46,13 +46,9 @@ export default function OptimizedAddTransaction() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const { addTransaction } = useTransactions();
 
-  const handleDateChange = useCallback((event: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    if (event.type === 'set' && date) {
-      setSelectedDate(date);
-    }
+  const handleDateChange = useCallback((date: Date) => {
+    setShowDatePicker(false);
+    setSelectedDate(date);
   }, []);
 
   const handleTypeChange = useCallback((newType: TransactionTypes) => {
@@ -116,9 +112,8 @@ export default function OptimizedAddTransaction() {
               placeholder="0.00"
               value={item.amount}
               onChangeText={(value) => updateField(index, 'amount', value)}
-              keyboardType="decimal-pad"
+              keyboardType="numeric"
               placeholderTextColor={Colors.placeholder}
-              color={Colors.text}
             />
           </View>
         </View>
@@ -133,7 +128,6 @@ export default function OptimizedAddTransaction() {
           value={item.description}
           onChangeText={(value) => updateField(index, 'description', value)}
           placeholderTextColor={Colors.placeholder}
-          color={Colors.text}
         />
         <View style={styles.amountContainer}>
           <Text style={styles.currencySymbol}>€</Text>
@@ -142,9 +136,8 @@ export default function OptimizedAddTransaction() {
             placeholder="0.00"
             value={item.amount}
             onChangeText={(value) => updateField(index, 'amount', value)}
-            keyboardType="decimal-pad"
+            keyboardType="numeric"
             placeholderTextColor={Colors.placeholder}
-            color={Colors.text}
           />
         </View>
       </View>
@@ -153,11 +146,14 @@ export default function OptimizedAddTransaction() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.mainContainer}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.container}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollViewContent}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.contentContainer}>
             <View style={styles.header}>
@@ -226,6 +222,7 @@ export default function OptimizedAddTransaction() {
               numColumns={type === TransactionTypes.INCOME ? 2 : 1}
               columnWrapperStyle={type === TransactionTypes.INCOME ? styles.row : undefined}
               showsVerticalScrollIndicator={false}
+              scrollEnabled={false}
             />
 
             <View style={styles.totalCard}>
@@ -255,46 +252,27 @@ export default function OptimizedAddTransaction() {
               </Text>
             </TouchableOpacity>
           </View>
+        </ScrollView>
 
-          {(Platform.OS === 'ios' || showDatePicker) && (
-            <Modal
-              visible={showDatePicker}
-              transparent={true}
-              animationType="slide"
-            >
-              <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
-                  <DateTimePicker
-                    value={selectedDate}
-                    mode="date"
-                    display="inline"
-                    onChange={handleDateChange}
-                    themeVariant="light"
-                    accentColor={Colors.primary}
-                  />
-                  <TouchableOpacity
-                    style={styles.modalButton}
-                    onPress={() => setShowDatePicker(false)}
-                  >
-                    <Text style={styles.modalButtonText}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </Modal>
-          )}
-        </KeyboardAvoidingView>
-      </View>
+        <DateTimePickerModal
+          isVisible={showDatePicker}
+          mode="date"
+          onConfirm={handleDateChange}
+          onCancel={() => setShowDatePicker(false)}
+          date={selectedDate}
+        />
+      </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
+  container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
-  container: {
-    flex: 1,
+  scrollViewContent: {
+    flexGrow: 1,
   },
   contentContainer: {
     flex: 1,
@@ -461,40 +439,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: Colors.white,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  modalButton: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: '600',
   },
   fullWidthFieldContainer: {
     width: SCREEN_WIDTH - 32,

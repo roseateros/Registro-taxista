@@ -11,16 +11,14 @@ import {
   StatusBar,
   SafeAreaView,
 } from 'react-native';
-import DateTimePickerModal from "react-native-modal-datetime-picker";
-import { format, isWithinInterval, startOfMonth, endOfMonth, parseISO, isSameMonth, isAfter, isBefore, isSameDay } from 'date-fns';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { format, isWithinInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { useTransactions, TransactionTypes } from '../context/TransactionsContext';
 import Colors from '../constants/Colors';
 import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
 
 export default function Home() {
   const { transactions, deleteTransaction, importTransactions, exportTransactions } = useTransactions();
@@ -30,13 +28,12 @@ export default function Home() {
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
-  const getMonthBalance = useCallback((date) => {
-    const start = startOfMonth(date);
-    const end = endOfMonth(date);
+  const getCurrentMonthBalance = useCallback(() => {
+    const now = new Date();
+    const start = startOfMonth(now);
+    const end = endOfMonth(now);
 
     return transactions.reduce((total, transaction) => {
       const transactionDate = parseISO(transaction.date);
@@ -47,59 +44,40 @@ export default function Home() {
     }, 0);
   }, [transactions]);
 
-  const handleConfirmDate = useCallback((date, isStart = true, isMonthPicker = false) => {
-    if (isMonthPicker) {
-      setSelectedMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-      setStartDate(null);
-      setEndDate(null);
-    } else if (isStart) {
+  const handleConfirmDate = useCallback((date, isStart = true) => {
+    if (isStart) {
       setStartDate(date);
+      setShowStartPicker(false);
       if (endDate && date > endDate) {
         setEndDate(date);
       }
     } else {
       if (startDate && date < startDate) {
-        Alert.alert('Invalid Date', 'End date cannot be before start date');
+        Alert.alert('Fecha inválida', 'La fecha final no puede ser anterior a la fecha inicial');
         return;
       }
       setEndDate(date);
+      setShowEndPicker(false);
     }
-    setShowStartPicker(false);
-    setShowEndPicker(false);
-    setShowMonthPicker(false);
   }, [startDate, endDate]);
 
   const handleImport = useCallback(async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
-      if (result.type === 'success') {
-        const content = await FileSystem.readAsStringAsync(result.uri);
-        const importedTransactions = JSON.parse(content);
-        await importTransactions(importedTransactions);
-        Alert.alert('Success', 'Transactions imported successfully!');
-      }
+      await importTransactions();
+      Alert.alert('Éxito', '¡Transacciones importadas correctamente!');
     } catch (error) {
-      console.error('Error importing transactions:', error);
-      Alert.alert('Error', 'Failed to import transactions.');
+      Alert.alert('Error', 'No se pudieron importar las transacciones.');
     }
   }, [importTransactions]);
 
   const handleExport = useCallback(async () => {
     try {
-      const content = JSON.stringify(transactions);
-      const fileUri = FileSystem.documentDirectory + 'transactions.json';
-      await FileSystem.writeAsStringAsync(fileUri, content);
-      if (Platform.OS === 'ios') {
-        await Sharing.shareAsync(fileUri, { UTI: 'public.json' });
-      } else {
-        await Sharing.shareAsync(fileUri, { mimeType: 'application/json' });
-      }
-      Alert.alert('Success', 'Transactions exported successfully!');
+      await exportTransactions();
+      Alert.alert('Éxito', '¡Transacciones exportadas correctamente!');
     } catch (error) {
-      console.error('Error exporting transactions:', error);
-      Alert.alert('Error', 'Failed to export transactions.');
+      Alert.alert('Error', 'No se pudieron exportar las transacciones.');
     }
-  }, [transactions]);
+  }, [exportTransactions]);
 
   const createHTMLContent = useCallback(() => {
     let netBalance = 0;
@@ -199,7 +177,12 @@ export default function Home() {
     `;
   }, [transactions, startDate, endDate]);
 
-  const handleExportToPDF = useCallback(async () => {
+  const handleExportWithDates = useCallback(async () => {
+    if (!startDate && !endDate) {
+      Alert.alert('Seleccionar rango de fechas', 'Por favor, selecciona un rango de fechas para exportar');
+      return;
+    }
+
     try {
       const { uri } = await Print.printToFileAsync({
         html: createHTMLContent(),
@@ -210,11 +193,13 @@ export default function Home() {
         UTI: '.pdf',
         mimeType: 'application/pdf',
       });
+
+      setShowExportModal(false);
     } catch (error) {
       console.error('Error al generar PDF:', error);
       Alert.alert('Error', 'No se pudo generar el informe PDF');
     }
-  }, [createHTMLContent]);
+  }, [startDate, endDate, createHTMLContent]);
 
   const handleDelete = useCallback((id) => {
     Alert.alert(
@@ -239,23 +224,31 @@ export default function Home() {
     );
   }, []);
 
+  const handleDateChange = useCallback((event, selectedDate) => {
+    const currentDate = selectedDate || (showStartPicker ? startDate : endDate);
+    if (Platform.OS === 'android') {
+      setShowStartPicker(false);
+      setShowEndPicker(false);
+    }
+    if (showStartPicker) {
+      handleConfirmDate(currentDate, true);
+    } else {
+      handleConfirmDate(currentDate, false);
+    }
+  }, [handleConfirmDate, showStartPicker, startDate, endDate]);
+
   const clearDates = useCallback(() => {
     setStartDate(null);
     setEndDate(null);
-    setSelectedMonth(new Date());
   }, []);
 
   const sections = useMemo(() => {
     const filteredTransactions = transactions.filter((transaction) => {
+      if (!startDate && !endDate) return true;
       const transactionDate = parseISO(transaction.date);
-      if (startDate && endDate) {
-        return isWithinInterval(transactionDate, { start: startDate, end: endDate });
-      } else if (startDate) {
-        return isAfter(transactionDate, startDate) || isSameDay(transactionDate, startDate);
-      } else if (endDate) {
-        return isBefore(transactionDate, endDate) || isSameDay(transactionDate, endDate);
-      }
-      return isSameMonth(transactionDate, selectedMonth);
+      const start = startDate || new Date(0);
+      const end = endDate || new Date(2099, 11, 31);
+      return isWithinInterval(transactionDate, { start, end });
     });
 
     const groups = filteredTransactions.reduce((acc, transaction) => {
@@ -282,7 +275,7 @@ export default function Home() {
         data: expandedSections.includes(section.id) ? section.data : [],
       }))
       .sort((a, b) => parseISO(b.id).getTime() - parseISO(a.id).getTime());
-  }, [transactions, startDate, endDate, selectedMonth, expandedSections]);
+  }, [transactions, startDate, endDate, expandedSections]);
 
   const renderItem = useCallback(({ item: transaction }) => (
     <TouchableOpacity
@@ -292,9 +285,6 @@ export default function Home() {
       <View style={styles.transactionInfo}>
         <Text style={styles.transactionTitle}>
           {transaction.description}
-        </Text>
-        <Text style={styles.transactionDate}>
-          {format(parseISO(transaction.date), 'HH:mm')}
         </Text>
       </View>
       <View style={styles.amountContainer}>
@@ -350,15 +340,12 @@ export default function Home() {
       {/* Header Section */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => setShowMonthPicker(true)} style={styles.monthSelector}>
-            <Text style={styles.monthText}>
-              {format(selectedMonth || new Date(), 'MMMM yyyy')}
-            </Text>
-            <MaterialIcons name="arrow-drop-down" size={24} color={Colors.white} />
-          </TouchableOpacity>
-          <Text style={styles.balanceTitle}>Selected month's available balance</Text>
-          <Text style={[styles.balanceAmount, getMonthBalance(selectedMonth) < 0 && styles.negative]}>
-            {getMonthBalance(selectedMonth) >= 0 ? '+' : ''}€{getMonthBalance(selectedMonth).toFixed(2)}
+          <Text style={styles.monthText}>
+            {format(new Date(), 'MMMM yyyy')}
+          </Text>
+          <Text style={styles.balanceTitle}>Balance del Mes Actual</Text>
+          <Text style={[styles.balanceAmount, getCurrentMonthBalance() < 0 && styles.negative]}>
+            {getCurrentMonthBalance() >= 0 ? '+' : ''}€{getCurrentMonthBalance().toFixed(2)}
           </Text>
         </View>
         <TouchableOpacity
@@ -381,18 +368,18 @@ export default function Home() {
 
         <TouchableOpacity
           style={styles.quickActionButton}
-          onPress={() => setShowFilterModal(true)}
+          onPress={() => setShowExportModal(true)}
         >
-          <MaterialIcons name="filter-list" size={24} color={Colors.primary} />
-          <Text style={styles.quickActionText}>Filtrar</Text>
+          <MaterialIcons name="picture-as-pdf" size={24} color={Colors.primary} />
+          <Text style={styles.quickActionText}>Exportar</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.quickActionButton}
-          onPress={handleExportToPDF}
+          onPress={handleImport}
         >
-          <MaterialIcons name="picture-as-pdf" size={24} color={Colors.primary} />
-          <Text style={styles.quickActionText}>Exportar PDF</Text>
+          <MaterialIcons name="file-upload" size={24} color={Colors.primary} />
+          <Text style={styles.quickActionText}>Importar</Text>
         </TouchableOpacity>
       </View>
 
@@ -407,45 +394,29 @@ export default function Home() {
       />
 
       {/* Date Pickers */}
-      <DateTimePickerModal
-        isVisible={showStartPicker}
-        mode="date"
-        onConfirm={(date) => handleConfirmDate(date, true)}
-        onCancel={() => setShowStartPicker(false)}
-        date={startDate || new Date()}
-      />
-      <DateTimePickerModal
-        isVisible={showEndPicker}
-        mode="date"
-        onConfirm={(date) => handleConfirmDate(date, false)}
-        onCancel={() => setShowEndPicker(false)}
-        date={endDate || new Date()}
-        minimumDate={startDate}
-      />
-      <DateTimePickerModal
-        isVisible={showMonthPicker}
-        mode="date"
-        onConfirm={(date) => {
-          handleConfirmDate(new Date(date.getFullYear(), date.getMonth(), 1), false, true);
-        }}
-        onCancel={() => setShowMonthPicker(false)}
-        date={selectedMonth || new Date()}
-        display="spinner"
-      />
+      {(showStartPicker || showEndPicker) && (
+        <DateTimePicker
+          value={showStartPicker ? (startDate || new Date()) : (endDate || new Date())}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+          minimumDate={showEndPicker ? startDate : undefined}
+        />
+      )}
 
-      {/* Filter Modal */}
+      {/* Export Date Filter Modal */}
       <Modal
-        visible={showFilterModal}
+        visible={showExportModal}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setShowFilterModal(false)}
+        onRequestClose={() => setShowExportModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filtrar Transacciones</Text>
+        <View style={styles.exportModalOverlay}>
+          <View style={styles.exportModalContent}>
+            <View style={styles.exportModalHeader}>
+              <Text style={styles.exportModalTitle}>Seleccionar Rango de Fechas</Text>
               <TouchableOpacity
-                onPress={() => setShowFilterModal(false)}
+                onPress={() => setShowExportModal(false)}
                 style={styles.closeButton}
               >
                 <MaterialIcons name="close" size={24} color={Colors.text} />
@@ -489,13 +460,11 @@ export default function Home() {
             </View>
 
             <TouchableOpacity
-              style={styles.applyFilterButton}
-              onPress={() => {
-                setShowFilterModal(false);
-              }}
+              style={styles.exportButton}
+              onPress={handleExportWithDates}
             >
-              <MaterialIcons name="check" size={20} color={Colors.white} />
-              <Text style={styles.applyFilterButtonText}>Apply Filter</Text>
+              <MaterialIcons name="file-download" size={20} color={Colors.white} />
+              <Text style={styles.exportButtonText}>Exportar a PDF</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -513,20 +482,26 @@ export default function Home() {
           onPress={() => setMenuVisible(false)}
         >
           <View style={styles.menuContent}>
-           <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={handleExport}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                handleExport();
+                setMenuVisible(false);
+              }}
             >
-              <MaterialIcons name="file-download" size={32} color={Colors.primary} />
-              <Text style={styles.quickActionText}>Export</Text>
+              <MaterialIcons name="file-download" size={24} color={Colors.primary} />
+              <Text style={styles.menuItemText}>Exportar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={handleImport}
+              style={styles.menuItem}
+              onPress={() => {
+                handleImport();
+                setMenuVisible(false);
+              }}
             >
-              <MaterialIcons name="file-upload" size={32} color={Colors.primary} />
-              <Text style={styles.quickActionText}>Import</Text>
+              <MaterialIcons name="file-upload" size={24} color={Colors.primary} />
+              <Text style={styles.menuItemText}>Importar</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -550,14 +525,10 @@ const styles = StyleSheet.create({
   headerContent: {
     flex: 1,
   },
-  monthSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   monthText: {
     color: Colors.white,
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    opacity: 0.8,
   },
   balanceTitle: {
     color: Colors.white,
@@ -642,11 +613,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.text,
   },
-  transactionDate: {
-    fontSize: 12,
-    color: Colors.textLight,
-    marginTop: 4,
-  },
   amountContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -665,24 +631,24 @@ const styles = StyleSheet.create({
   negative: {
     color: Colors.expense,
   },
-  modalOverlay: {
+  exportModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
+  exportModalContent: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
   },
-  modalHeader: {
+  exportModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
   },
-  modalTitle: {
+  exportModalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: Colors.text,
@@ -724,7 +690,7 @@ const styles = StyleSheet.create({
     color: Colors.white,
     marginLeft: 8,
   },
-  applyFilterButton: {
+  exportButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -732,7 +698,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
   },
-  applyFilterButtonText: {
+  exportButtonText: {
     color: Colors.white,
     marginLeft: 8,
     fontSize: 16,
