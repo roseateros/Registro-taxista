@@ -27,9 +27,15 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "splash": {
+        "image": "./assets/images/splash.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#ffffff"
+      },
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.INTERNET"
       ],
       "package": "com.roseateros.taxibalancepro"
     },
@@ -59,8 +65,12 @@
     },
     "extra": {
       "eas": {
-        "projectId": "a0bed3a5-27d1-47af-8a43-e4a383726166"
+        "projectId": "0ae87c2c-285d-4a95-90b5-6e3b7d49dd10"
+      },
+      "router": {
+        "origin": false
       }
-    }
+    },
+    "owner": "roseateros"
   }
 }

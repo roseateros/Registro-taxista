@@ -329,7 +329,7 @@ const handleImport = async () => {
           </TouchableOpacity>
           <Text style={styles.balanceTitle}>Selected month's total balance</Text>
           <Text style={[styles.balanceAmount, getMonthBalance(selectedMonth) < 0 && styles.negative]}>
-            {getMonthBalance(selectedMonth) >= 0 ? '+' : ''}€{getMonthBalance(selectedMonth).toFixed(2)}
+            {getMonthBalance(selectedMonth) >= 0 ? '' : ''}€{getMonthBalance(selectedMonth).toFixed(2)}
           </Text>
         </View>
        <TouchableOpacity
