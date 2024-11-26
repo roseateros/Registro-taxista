@@ -1,8 +1,8 @@
-# 💶 Transaction Tracker Mobile App
+# 💶 TaxiBalance Pro Mobile App
 
 ## Overview
 
-Transaction Tracker is a mobile application built with React Native that helps users efficiently track their daily income and expenses. The app provides a user-friendly interface for quickly logging financial transactions with customizable input options.
+TaxiBalance Pro is a mobile application built with React Native that helps users efficiently track their daily income and expenses. The app provides a user-friendly interface for quickly logging financial transactions with customizable input options.
 
 ## 🌟 Features
 
