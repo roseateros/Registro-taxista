@@ -124,10 +124,13 @@ export default function OptimizedAddTransaction() {
       <View style={styles.fullWidthFieldContainer}>
         <TextInput
           style={styles.descriptionInput}
-          placeholder="Description"
+          placeholder="What did you spend on? (e.g., Fuel, Maintenance)"
           value={item.description}
           onChangeText={(value) => updateField(index, 'description', value)}
           placeholderTextColor={Colors.placeholder}
+          multiline={true}
+          numberOfLines={2}
+          textAlignVertical="top"
         />
         <View style={styles.amountContainer}>
           <Text style={styles.currencySymbol}>€</Text>
@@ -378,24 +381,32 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   descriptionInput: {
-    fontSize: 16,
+    fontSize: 18,
     color: Colors.text,
-    marginBottom: 12,
-    padding: 6,
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: Colors.lightBackground,
+    borderRadius: 8,
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
   amountContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: Colors.lightBackground,
+    borderRadius: 8,
+    padding: 12,
   },
   currencySymbol: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: Colors.text,
+    marginLeft: 8,
   },
   amountInput: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: Colors.text,
     padding: 0,
@@ -455,18 +466,8 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH - 32,
     backgroundColor: Colors.white,
     borderRadius: 8,
-    padding: 12,
+    padding: 16,
     marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+    elevation: 1,
   },
 });
