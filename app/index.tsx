@@ -332,45 +332,62 @@ const handleImport = async () => {
           size={16}
           color={transaction.type === TransactionTypes.INCOME ? Colors.income : Colors.expense}
         />
-        <Text
-          style={[
-            styles.transactionAmount,
-            transaction.type === TransactionTypes.INCOME
-              ? styles.income
-              : styles.expense,
-          ]}
-        >
+        <Text style={[
+          styles.transactionAmount,
+          transaction.type === TransactionTypes.EXPENSE ? styles.expense : styles.income
+        ]}>
           €{transaction.amount.toFixed(2)}
         </Text>
       </View>
     </TouchableOpacity>
   ), [handleDelete]);
 
-  const renderSectionHeader = useCallback(({ section }) => (
-    <TouchableOpacity
-      style={styles.dateSection}
-      onPress={() => toggleSection(section.id)}
-    >
-      <View style={styles.dateSectionHeader}>
-        <View style={styles.dateSectionLeft}>
-          <MaterialIcons
-            name={expandedSections.includes(section.id) ? 'expand-more' : 'chevron-right'}
-            size={24}
-            color={Colors.text}
-          />
-          <Text style={styles.dateSectionTitle}>{section.title}</Text>
-        </View>
-        <Text
-          style={[
-            styles.dateSectionTotal,
-            section.balance >= 0 ? styles.income : styles.expense,
-          ]}
+  const renderSectionHeader = useCallback(({ section: { data, id, title, balance } }) => {
+    const sectionData = transactions.filter(t => 
+      format(parseISO(t.date), 'yyyy-MM-dd') === id
+    );
+    
+    const totalIncome = sectionData.reduce((sum, transaction) => 
+      sum + (transaction.type === TransactionTypes.INCOME ? transaction.amount : 0), 0
+    );
+    const totalExpense = sectionData.reduce((sum, transaction) => 
+      sum + (transaction.type === TransactionTypes.EXPENSE ? transaction.amount : 0), 0
+    );
+    const netBalance = totalIncome - totalExpense;
+    
+    return (
+      <View style={styles.sectionHeaderContainer}>
+        <TouchableOpacity
+          style={styles.dateSection}
+          onPress={() => toggleSection(id)}
         >
-          {section.balance >= 0 ? '+' : ''}€{section.balance.toFixed(2)}
-        </Text>
+          <View style={styles.dateSectionHeader}>
+            <View style={styles.dateSectionLeft}>
+              <MaterialIcons
+                name={expandedSections.includes(id) ? 'expand-more' : 'chevron-right'}
+                size={24}
+                color={Colors.text}
+              />
+              <Text style={styles.dateSectionTitle}>{title}</Text>
+            </View>
+            <View style={styles.dateSectionRight}>
+              <Text style={[styles.dateSectionTotal, styles.income]}>
+                €{totalIncome.toFixed(2)}
+              </Text>
+              {totalExpense > 0 && (
+                <Text style={[styles.dateSectionExpense]}>
+                  -€{totalExpense.toFixed(2)}
+                </Text>
+              )}
+              <Text style={[styles.dateSectionNet, netBalance >= 0 ? styles.income : styles.expense]}>
+                Net: €{netBalance.toFixed(2)}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
-  ), [expandedSections, toggleSection]);
+    );
+  }, [expandedSections, toggleSection, transactions]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -442,6 +459,8 @@ const handleImport = async () => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
+        stickySectionHeadersEnabled={false}
+        showsVerticalScrollIndicator={true}
       />
 
       {/* Date Pickers */}
@@ -636,10 +655,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     margin: 16,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   quickActionButton: {
     alignItems: 'center',
@@ -657,11 +672,13 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   dateSection: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.lightBackground,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderRadius: 8,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    elevation: 1,
   },
   dateSectionHeader: {
     flexDirection: 'row',
@@ -673,24 +690,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateSectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: 'bold',
     color: Colors.text,
     marginLeft: 8,
+  },
+  dateSectionRight: {
+    alignItems: 'flex-end',
   },
   dateSectionTotal: {
     fontSize: 16,
     fontWeight: 'bold',
   },
+  dateSectionExpense: {
+    fontSize: 10,
+    color: Colors.expense,
+    marginTop: 2,
+  },
+  dateSectionNet: {
+    fontSize: 10,
+    marginTop: 2,
+    fontWeight: 'bold',
+  },
   transaction: {
-    backgroundColor: Colors.LightOrange,
+    backgroundColor: Colors.white,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    paddingLeft:48,
+    paddingLeft: 48,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+    marginHorizontal: 8,
   },
   transactionInfo: {
     flex: 1,
@@ -826,5 +858,14 @@ modalOverlay: {
     marginLeft: 16,
     fontSize: 16,
     color: Colors.text,
+  },
+  expenseAmount: {
+    fontSize: 12,
+    color: Colors.expense,
+    marginTop: 2,
+  },
+  sectionHeaderContainer: {
+    backgroundColor: Colors.background,
+    marginBottom: 1, // Add small gap between sections
   },
 });
